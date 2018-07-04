@@ -1,0 +1,7 @@
+.idea
+.DS_Store
+
+source_images/
+processed_images/
+
+*.exclude.*
