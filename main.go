@@ -117,33 +117,45 @@ func SaveToFile(img image.Image, filename string) error {
 	return nil
 }
 
+func ProcessImages(fileName string) {
+	encodedImage, err := LoadFromFile(fileName)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var maxWidth uint = 200
+	var maxHeight uint = 0  // To preserve aspect ratio
+	thumbnail := resize.Resize(maxWidth, maxHeight, encodedImage, resize.Lanczos3)
+
+	// Add watermark
+	thumbnailPoints := thumbnail.Bounds()
+	watermarkImage  := image.NewRGBA(thumbnailPoints)
+	AddWatermark(watermarkImage)
+	// Merge images
+	newImage  := image.NewRGBA(thumbnailPoints)
+	draw.Draw(newImage, thumbnailPoints, thumbnail, image.ZP, draw.Src)
+	draw.Draw(newImage, thumbnailPoints, watermarkImage, image.ZP, draw.Over)
+
+	err = SaveToFile(newImage, fileName)
+	if err != nil {
+		log.Fatal(err)
+	}
+}
+
+func Worker(done chan bool, imageList []string) {
+		for _, fileName := range imageList {
+			ProcessImages(fileName)
+		}
+    done <- true
+}
+
+
 func main() {
 	imageList, err := ReadFolderFiles(sourceFolder)
 	if err != nil {
 		log.Fatal(err)
 	}
-	for _, fileName := range imageList {
-		encodedImage, err := LoadFromFile(fileName)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		var maxWidth uint = 200
-		var maxHeight uint = 0  // To preserve aspect ratio
-		thumbnail := resize.Resize(maxWidth, maxHeight, encodedImage, resize.Lanczos3)
-
-		// Add watermark
-		thumbnailPoints := thumbnail.Bounds()
-		watermarkImage  := image.NewRGBA(thumbnailPoints)
-		AddWatermark(watermarkImage)
-		// Merge images
-		newImage  := image.NewRGBA(thumbnailPoints)
-		draw.Draw(newImage, thumbnailPoints, thumbnail, image.ZP, draw.Src)
-    draw.Draw(newImage, thumbnailPoints, watermarkImage, image.ZP, draw.Over)
-
-		err = SaveToFile(newImage, fileName)
-		if err != nil {
-			log.Fatal(err)
-		}
-	}
+	done := make(chan bool, 1)
+	go Worker(done, imageList)
+	<-done
 }
