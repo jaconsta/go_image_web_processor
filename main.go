@@ -5,9 +5,14 @@ import (
 	// "encoding/base64"
 	"io/ioutil"
 	"fmt"
+	"golang.org/x/image/font"
+	"golang.org/x/image/font/basicfont"
+	"golang.org/x/image/math/fixed"
 	"image"
+	"image/draw"
 	"image/png"
 	"image/jpeg"
+	"image/color"
 	"log"
 	"os"
 	"path/filepath"
@@ -84,6 +89,22 @@ func loadFromString(base64String string) (img image.Image, err error) {
 	return nil, nil
 }
 
+func addWatermark(img *image.RGBA) {
+	label := "A watermark"
+	x := 20
+	y := 30
+	watermarkColor := color.RGBA{200, 100, 0, 255}
+	point := fixed.Point26_6{fixed.Int26_6(x * 64), fixed.Int26_6(y * 64)}
+
+	d := &font.Drawer{
+		Dst:  img,
+		Src:  image.NewUniform(watermarkColor),
+		Face: basicfont.Face7x13,
+		Dot:  point,
+	}
+	d.DrawString(label)
+}
+
 func saveToFile(img image.Image, filename string) error {
 	fileLocation := filepath.Join(destinationFolder, filename)
 	outputImage, err := os.Create(fileLocation)
@@ -110,7 +131,16 @@ func main() {
 		var maxWidth uint = 200
 		var maxHeight uint = 0  // To preserve aspect ratio
 		thumbnail := resize.Resize(maxWidth, maxHeight, encodedImage, resize.Lanczos3)
-		err = saveToFile(thumbnail, "three_copy.png")
+
+		// Add watermark
+		thumbnailPoints := thumbnail.Bounds()
+		watermarkImage  := image.NewRGBA(thumbnailPoints)
+		addWatermark(watermarkImage)
+		newImage  := image.NewRGBA(thumbnailPoints)
+		draw.Draw(newImage, thumbnailPoints, thumbnail, image.ZP, draw.Src)
+    draw.Draw(newImage, watermarkImage.Bounds(), watermarkImage, image.ZP, draw.Over)
+
+		err = saveToFile(newImage, fileName)
 		if err != nil {
 			log.Fatal(err)
 		}
