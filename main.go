@@ -23,7 +23,7 @@ import (
 var sourceFolder = "./source_images"
 var destinationFolder = "./processed_images"
 
-func readFolderFiles(folderPath string) ([]string, error) {
+func ReadFolderFiles(folderPath string) ([]string, error) {
 	// Try Glob too. https://golang.org/src/path/filepath/match.go?s=5609:5664#L224
 	files, err := ioutil.ReadDir(folderPath)
     if err != nil {
@@ -39,7 +39,7 @@ func readFolderFiles(folderPath string) ([]string, error) {
 		return fileNames, nil
 }
 
-func loadFromFile(fileName string) (img image.Image, err error) {
+func LoadFromFile(fileName string) (img image.Image, err error) {
 	fileLocation := filepath.Join(sourceFolder, fileName)
 	// Load File
 	storedFile, err := os.Open(fileLocation)
@@ -73,7 +73,7 @@ func loadFromFile(fileName string) (img image.Image, err error) {
 	return  img, nil
 }
 
-func loadFromString(base64String string) (img image.Image, err error) {
+func LoadFromString(base64String string) (img image.Image, err error) {
 	// // Encode Base64
 	// var buff bytes.Buffer
 	// png.Encode(&buff, base64String)
@@ -89,7 +89,7 @@ func loadFromString(base64String string) (img image.Image, err error) {
 	return nil, nil
 }
 
-func addWatermark(img *image.RGBA) {
+func AddWatermark(img *image.RGBA) {
 	label := "A watermark"
 	x := 20
 	y := 30
@@ -105,7 +105,7 @@ func addWatermark(img *image.RGBA) {
 	d.DrawString(label)
 }
 
-func saveToFile(img image.Image, filename string) error {
+func SaveToFile(img image.Image, filename string) error {
 	fileLocation := filepath.Join(destinationFolder, filename)
 	outputImage, err := os.Create(fileLocation)
 	if err != nil {
@@ -118,12 +118,12 @@ func saveToFile(img image.Image, filename string) error {
 }
 
 func main() {
-	imageList, err := readFolderFiles(sourceFolder)
+	imageList, err := ReadFolderFiles(sourceFolder)
 	if err != nil {
 		log.Fatal(err)
 	}
 	for _, fileName := range imageList {
-		encodedImage, err := loadFromFile(fileName)
+		encodedImage, err := LoadFromFile(fileName)
 		if err != nil {
 			log.Fatal(err)
 		}
@@ -135,12 +135,13 @@ func main() {
 		// Add watermark
 		thumbnailPoints := thumbnail.Bounds()
 		watermarkImage  := image.NewRGBA(thumbnailPoints)
-		addWatermark(watermarkImage)
+		AddWatermark(watermarkImage)
+		// Merge images
 		newImage  := image.NewRGBA(thumbnailPoints)
 		draw.Draw(newImage, thumbnailPoints, thumbnail, image.ZP, draw.Src)
-    draw.Draw(newImage, watermarkImage.Bounds(), watermarkImage, image.ZP, draw.Over)
+    draw.Draw(newImage, thumbnailPoints, watermarkImage, image.ZP, draw.Over)
 
-		err = saveToFile(newImage, fileName)
+		err = SaveToFile(newImage, fileName)
 		if err != nil {
 			log.Fatal(err)
 		}
